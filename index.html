@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Malena Marques</title>
+  <meta name="theme-color" content="#F3B6B6">
+  <meta name="description" content="Agenda, clientes e financeiro — Malena Marques">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Malena Marques">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ===================== TELA: CONFIGURAÇÃO PENDENTE ===================== -->
+<section id="tela-config" class="tela-central oculto">
+  <div class="cartao-central">
+    <div class="marca"><div class="marca-bolinha">M</div><div><div class="titulo">Configuração</div></div></div>
+    <p class="subtitulo">Falta conectar o aplicativo ao banco na nuvem.</p>
+    <p style="font-size:14px;line-height:1.5">
+      Abra o arquivo <b>js/config.js</b> e preencha <b>SUPABASE_URL</b> e
+      <b>SUPABASE_ANON_KEY</b> com os dados do seu projeto Supabase.
+      O passo a passo está no <b>README.md</b>.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ TELA: LOGIN ============================ -->
+<section id="tela-login" class="tela-central oculto">
+  <form id="form-login" class="cartao-central">
+    <div class="marca"><div class="marca-bolinha" id="login-inicial">M</div><div>
+      <div class="titulo" id="login-nome">Malena Marques</div>
+      <div class="subtitulo" id="login-sub">Agenda, clientes e financeiro</div>
+    </div></div>
+    <label for="login-email">E-mail</label>
+    <input type="email" id="login-email" autocomplete="username" required>
+    <label for="login-senha">Senha</label>
+    <input type="password" id="login-senha" autocomplete="current-password" required>
+    <div style="height:18px"></div>
+    <button class="btn" style="width:100%" id="login-entrar">Entrar</button>
+    <div id="login-msg" class="aviso erro oculto" style="border-radius:10px;margin-top:12px"></div>
+  </form>
+</section>
+
+<!-- ============================= TELA: APP ============================= -->
+<section id="tela-app" class="oculto">
+  <header class="topo">
+    <div class="topo-linha">
+      <div class="marca-bolinha" id="app-inicial">M</div>
+      <div>
+        <div class="titulo" id="app-nome">Malena Marques</div>
+        <div class="subtitulo" id="app-sub">Agenda, clientes e financeiro</div>
+      </div>
+      <div class="topo-acoes">
+        <span class="usuario" id="app-usuario"></span>
+        <button class="btn-mini" id="btn-atualizar" title="Atualizar dados">↻ Atualizar</button>
+        <button class="btn-mini" id="btn-sair">Sair</button>
+      </div>
+    </div>
+    <nav class="abas">
+      <button class="aba ativa" data-tab="agenda">Agenda</button>
+      <button class="aba" data-tab="clientes">Clientes</button>
+      <button class="aba" data-tab="procedimentos">Procedimentos</button>
+      <button class="aba" data-tab="financeiro">Financeiro</button>
+      <button class="aba" data-tab="ajustes">Ajustes</button>
+      <button class="aba" data-tab="backup">Backup</button>
+    </nav>
+  </header>
+
+  <div id="aviso-demo" class="aviso previa oculto">Prévia — dados de exemplo (nada é salvo).</div>
+  <div id="aviso-offline" class="aviso offline oculto">Sem internet — modo somente leitura. Conecte-se para salvar.</div>
+
+  <main>
+    <!-- ----------------------------- AGENDA ----------------------------- -->
+    <section id="tab-agenda">
+      <div class="cartao">
+        <h2 id="agenda-form-titulo">Novo atendimento</h2>
+        <form id="form-agenda">
+          <input type="hidden" id="agenda-id">
+          <div class="grade">
+            <div class="combo">
+              <label for="agenda-cliente-busca">Cliente</label>
+              <input type="text" id="agenda-cliente-busca" placeholder="Digite para buscar a cliente..." autocomplete="off">
+              <input type="hidden" id="agenda-cliente">
+              <div id="agenda-cliente-lista" class="combo-lista oculto"></div>
+            </div>
+            <div class="combo">
+              <label for="agenda-procedimento-busca">Procedimento</label>
+              <input type="text" id="agenda-procedimento-busca" placeholder="Digite para buscar o procedimento..." autocomplete="off">
+              <input type="hidden" id="agenda-procedimento">
+              <div id="agenda-procedimento-lista" class="combo-lista oculto"></div>
+            </div>
+            <div>
+              <label for="agenda-data">Data</label>
+              <input type="date" id="agenda-data" required>
+            </div>
+            <div>
+              <label for="agenda-horario">Horário</label>
+              <input type="time" id="agenda-horario" required>
+            </div>
+            <div>
+              <label for="agenda-valor">Valor (R$)</label>
+              <input type="text" id="agenda-valor" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div>
+              <label for="agenda-desconto">Desconto (%)</label>
+              <input type="text" id="agenda-desconto" inputmode="decimal" placeholder="0">
+            </div>
+            <div>
+              <label for="agenda-recebimento">Quem recebe?</label>
+              <select id="agenda-recebimento"></select>
+            </div>
+            <div>
+              <label for="agenda-forma">Forma de pagamento</label>
+              <select id="agenda-forma"></select>
+            </div>
+            <div id="campo-parcelas" class="oculto">
+              <label for="agenda-parcelas">Parcelas</label>
+              <select id="agenda-parcelas"></select>
+            </div>
+            <div>
+              <label for="agenda-situacao">Situação</label>
+              <select id="agenda-situacao"></select>
+            </div>
+          </div>
+          <div id="agenda-taxa" class="taxa-info oculto"></div>
+          <label class="check">
+            <input type="checkbox" id="agenda-pago"> Já recebido (pago)
+          </label>
+          <label for="agenda-obs">Observações</label>
+          <input type="text" id="agenda-obs" placeholder="Opcional">
+          <div style="height:16px"></div>
+          <div class="linha">
+            <button type="submit" class="btn" id="agenda-salvar">Adicionar à agenda</button>
+            <button type="button" class="btn-sec oculto" id="agenda-cancelar">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="cartao">
+        <h2>Agendamentos e atendimentos</h2>
+        <input type="text" id="agenda-busca" placeholder="Buscar por cliente ou procedimento..." style="margin-bottom:8px">
+        <div id="lista-agenda"></div>
+      </div>
+    </section>
+
+    <!-- ---------------------------- CLIENTES ---------------------------- -->
+    <section id="tab-clientes" class="oculto">
+      <div class="cartao">
+        <h2 id="cliente-form-titulo">Nova cliente</h2>
+        <form id="form-cliente">
+          <input type="hidden" id="cliente-id">
+          <div class="grade">
+            <div>
+              <label for="cliente-nome">Nome</label>
+              <input type="text" id="cliente-nome" placeholder="Nome completo" required>
+            </div>
+            <div>
+              <label for="cliente-telefone">Telefone</label>
+              <input type="tel" id="cliente-telefone" placeholder="(00) 00000-0000">
+            </div>
+            <div>
+              <label for="cliente-instagram">Instagram</label>
+              <input type="text" id="cliente-instagram" placeholder="@usuario">
+            </div>
+          </div>
+          <label for="cliente-obs">Observações</label>
+          <textarea id="cliente-obs" placeholder="Preferências, histórico..."></textarea>
+          <div style="height:16px"></div>
+          <div class="linha">
+            <button type="submit" class="btn" id="cliente-salvar">Salvar cliente</button>
+            <button type="button" class="btn-sec oculto" id="cliente-cancelar">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="cartao">
+        <h2>Clientes cadastradas</h2>
+        <input type="text" id="cliente-busca" placeholder="Buscar por nome, telefone ou Instagram..." style="margin-bottom:8px">
+        <div id="lista-clientes"></div>
+      </div>
+    </section>
+
+    <!-- -------------------------- PROCEDIMENTOS ------------------------- -->
+    <section id="tab-procedimentos" class="oculto">
+      <div class="cartao">
+        <h2 id="proc-form-titulo">Novo procedimento</h2>
+        <form id="form-procedimento">
+          <input type="hidden" id="proc-id">
+          <div class="grade">
+            <div>
+              <label for="proc-nome">Nome</label>
+              <input type="text" id="proc-nome" placeholder="Ex: Alongamento em gel" required>
+            </div>
+            <div>
+              <label for="proc-valor">Valor (R$)</label>
+              <input type="text" id="proc-valor" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div>
+              <label for="proc-duracao">Tempo (minutos)</label>
+              <input type="number" id="proc-duracao" min="0" step="5" placeholder="Ex: 90">
+            </div>
+          </div>
+          <div style="height:16px"></div>
+          <div class="linha">
+            <button type="submit" class="btn" id="proc-salvar">Salvar procedimento</button>
+            <button type="button" class="btn-sec oculto" id="proc-cancelar">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="cartao">
+        <h2>Meus procedimentos</h2>
+        <div id="lista-procedimentos"></div>
+      </div>
+    </section>
+
+    <!-- --------------------------- FINANCEIRO --------------------------- -->
+    <section id="tab-financeiro" class="oculto">
+      <div class="cartao filtro">
+        <label for="fin-mes">Período</label>
+        <select id="fin-mes"></select>
+      </div>
+
+      <div class="resumos">
+        <div class="resumo"><div class="rot">Faturado (bruto)</div><div class="val valor receita" id="fin-bruto">R$ 0,00</div></div>
+        <div class="resumo"><div class="rot">Taxas do cartão</div><div class="val valor despesa" id="fin-taxas">R$ 0,00</div></div>
+        <div class="resumo"><div class="rot">Comissão do salão</div><div class="val valor despesa" id="fin-comissao">R$ 0,00</div></div>
+        <div class="resumo"><div class="rot">Recebido (líquido)</div><div class="val" id="fin-liquido">R$ 0,00</div></div>
+        <div class="resumo"><div class="rot">A receber</div><div class="val" id="fin-areceber">R$ 0,00</div></div>
+        <div class="resumo"><div class="rot">Despesas</div><div class="val valor despesa" id="fin-despesas">R$ 0,00</div></div>
+        <div class="resumo"><div class="rot">Lucro</div><div class="val" id="fin-lucro">R$ 0,00</div></div>
+      </div>
+
+      <div class="cartao">
+        <h2>Detalhado do período</h2>
+        <div class="detalhe-blocos">
+          <div>
+            <div class="rot-sec">Por forma de pagamento</div>
+            <div id="fin-por-forma"></div>
+          </div>
+          <div>
+            <div class="rot-sec">Por cliente</div>
+            <div id="fin-por-cliente"></div>
+          </div>
+          <div>
+            <div class="rot-sec">Por procedimento</div>
+            <div id="fin-por-procedimento"></div>
+          </div>
+          <div>
+            <div class="rot-sec">Descontos concedidos</div>
+            <div id="fin-descontos"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cartao">
+        <h2>A receber do salão (por quinzena)</h2>
+        <p class="ajuda">O salão recebe da cliente, fica com a comissão e repassa a você a cada quinzena. Ao receber, toque em <b>Receber</b>.</p>
+        <div id="lista-quinzenas"></div>
+      </div>
+
+      <div class="cartao">
+        <h2>Recebimentos</h2>
+        <div id="lista-recebimentos"></div>
+      </div>
+
+      <div class="cartao">
+        <h2 id="fin-form-titulo">Nova despesa</h2>
+        <p class="ajuda">Registre aqui o que sai (produtos, contas, aluguel...). Para uma receita avulsa (ex.: venda de produto), troque o tipo.</p>
+        <form id="form-fin">
+          <input type="hidden" id="fin-id">
+          <div class="grade">
+            <div>
+              <label for="fin-tipo">Tipo</label>
+              <select id="fin-tipo"><option>Despesa</option><option>Receita</option></select>
+            </div>
+            <div>
+              <label for="fin-categoria">Categoria</label>
+              <select id="fin-categoria"></select>
+            </div>
+            <div>
+              <label for="fin-data">Data</label>
+              <input type="date" id="fin-data">
+            </div>
+            <div>
+              <label for="fin-profissional">Profissional</label>
+              <select id="fin-profissional"></select>
+            </div>
+            <div>
+              <label for="fin-forma">Forma de pagamento</label>
+              <select id="fin-forma"></select>
+            </div>
+            <div>
+              <label for="fin-status">Status</label>
+              <select id="fin-status"></select>
+            </div>
+            <div>
+              <label for="fin-previsto">Valor previsto (R$)</label>
+              <input type="text" id="fin-previsto" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div>
+              <label for="fin-realizado">Valor realizado (R$)</label>
+              <input type="text" id="fin-realizado" inputmode="decimal" placeholder="0,00">
+            </div>
+          </div>
+          <label for="fin-descricao">Descrição</label>
+          <input type="text" id="fin-descricao" placeholder="Ex: Compra de géis" required>
+          <label for="fin-obs">Observações</label>
+          <input type="text" id="fin-obs" placeholder="Opcional">
+          <div style="height:16px"></div>
+          <div class="linha">
+            <button type="submit" class="btn" id="fin-salvar">Salvar</button>
+            <button type="button" class="btn-sec oculto" id="fin-cancelar">Cancelar edição</button>
+          </div>
+        </form>
+        <div style="height:18px"></div>
+        <div id="lista-fin"></div>
+      </div>
+    </section>
+
+    <!-- ----------------------------- AJUSTES ---------------------------- -->
+    <section id="tab-ajustes" class="oculto">
+      <div class="cartao">
+        <h2>Taxas do cartão</h2>
+        <p class="ajuda">Quanto a maquininha desconta em cada venda. O crédito muda conforme o número de parcelas.</p>
+        <div class="grade">
+          <div>
+            <label for="aj-debito">Débito (%)</label>
+            <input type="text" id="aj-debito" inputmode="decimal" placeholder="0,00">
+          </div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="rot-sec">Crédito — % por número de parcelas</div>
+        <div class="grade" id="aj-credito-grid"></div>
+        <div style="height:16px"></div>
+        <div class="rot-sec">Salão</div>
+        <div class="grade">
+          <div>
+            <label for="aj-comissao">Comissão do salão (%)</label>
+            <input type="text" id="aj-comissao" inputmode="decimal" placeholder="30">
+          </div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="linha">
+          <button class="btn" id="aj-salvar">Salvar taxas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------- BACKUP ----------------------------- -->
+    <section id="tab-backup" class="oculto">
+      <div class="cartao">
+        <h2>Backup dos dados</h2>
+        <p class="ajuda">
+          Os dados ficam no banco na nuvem, mas exporte um backup de vez em quando.
+          Guarde o arquivo no Google Drive, e-mail ou no aparelho.
+        </p>
+        <div style="height:16px"></div>
+        <div class="linha">
+          <button class="btn" id="btn-exportar">Exportar backup (JSON)</button>
+          <button class="btn btn-sec" id="btn-exportar-csv">Exportar CSV</button>
+        </div>
+        <label for="importar-arquivo">Restaurar/importar backup</label>
+        <input type="file" id="importar-arquivo" accept="application/json,.json">
+      </div>
+      <div class="cartao">
+        <h2>Resumo</h2>
+        <div id="backup-resumo"></div>
+      </div>
+    </section>
+  </main>
+</section>
+
+<!-- ============================== MODAL ============================== -->
+<div id="modal" class="modal-fundo oculto">
+  <div class="modal-caixa">
+    <p id="modal-msg">Tem certeza?</p>
+    <div class="modal-acoes">
+      <button class="btn" id="modal-ok" style="background:var(--vermelho)">Confirmar</button>
+      <button class="btn btn-sec" id="modal-nao">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast oculto"></div>
+
+<script src="js/vendor/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
