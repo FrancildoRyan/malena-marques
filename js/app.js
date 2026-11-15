@@ -20,6 +20,7 @@
     lancamentos: [],
     procedimentos: [],
     itensAgenda: [],
+    filtroAgenda: 'agendados',
     ajustes: null,
     filtroMes: '',
     online: navigator.onLine,
@@ -525,14 +526,48 @@
 
   function renderAgenda() {
     var busca = ($('agenda-busca').value || '').toLowerCase();
-    var lista = state.agendamentos.filter(function (a) {
+    var filtro = state.filtroAgenda || 'agendados';
+    function ehAtendido(a) { return (a.status || '') === 'Atendido'; }
+    function ehCancelado(a) { return (a.status || '') === 'Cancelado'; }
+    function combina(a) {
       return (a.cliente_nome || '').toLowerCase().indexOf(busca) >= 0 ||
         (a.procedimento || '').toLowerCase().indexOf(busca) >= 0 ||
         nomesItens(a).toLowerCase().indexOf(busca) >= 0;
-    }).sort(function (a, b) { return (a.data + (a.horario || '')).localeCompare(b.data + (b.horario || '')); });
+    }
+
+    // Contadores das abas (consideram tudo, ignorando a busca).
+    var cAg = $('cont-agendados'), cAt = $('cont-atendidos'), cTo = $('cont-todos');
+    if (cAg) cAg.textContent = state.agendamentos.filter(function (a) { return !ehAtendido(a) && !ehCancelado(a); }).length;
+    if (cAt) cAt.textContent = state.agendamentos.filter(ehAtendido).length;
+    if (cTo) cTo.textContent = state.agendamentos.length;
+
+    // Marca a aba ativa.
+    var box = $('agenda-filtro');
+    if (box) [].forEach.call(box.querySelectorAll('.sub-aba'), function (b) {
+      b.classList.toggle('ativa', b.getAttribute('data-filtro-agenda') === filtro);
+    });
+
+    var lista = state.agendamentos.filter(function (a) {
+      if (!combina(a)) return false;
+      if (filtro === 'atendidos') return ehAtendido(a);
+      if (filtro === 'agendados') return !ehAtendido(a) && !ehCancelado(a);
+      return true;
+    });
+    if (filtro === 'atendidos') {
+      // Mais recentes primeiro.
+      lista.sort(function (a, b) { return (b.data + (b.horario || '')).localeCompare(a.data + (a.horario || '')); });
+    } else {
+      lista.sort(function (a, b) { return (a.data + (a.horario || '')).localeCompare(b.data + (b.horario || '')); });
+    }
 
     var el = $('lista-agenda');
-    if (!lista.length) { el.innerHTML = '<div class="vazio">Nenhum agendamento.</div>'; return; }
+    if (!lista.length) {
+      el.innerHTML = '<div class="vazio">' +
+        (filtro === 'atendidos' ? 'Nenhum atendimento concluído.'
+         : filtro === 'agendados' ? 'Nenhum atendimento por atender.'
+         : 'Nenhum agendamento.') + '</div>';
+      return;
+    }
     el.innerHTML = lista.map(function (a) {
       var cls = 'et-' + String(a.status || 'agendado').toLowerCase();
       return '<div class="item"><div class="info">' +
@@ -1007,6 +1042,8 @@
     if (r.error) return toast('Erro ao salvar: ' + r.error.message);
     limparFormAgenda();
     await carregarTudo();
+    // Mostra o atendimento salvo logo na aba certa (Agendados/Atendidos/Todos).
+    if (state.filtroAgenda !== 'todos') state.filtroAgenda = (dados.status === 'Atendido') ? 'atendidos' : 'agendados';
     renderTudo();
     toast(id ? 'Atendimento atualizado!' : 'Atendimento salvo!');
   }
@@ -1223,6 +1260,8 @@
       var t = ev.target;
       if (!(t instanceof HTMLElement)) return;
       var d;
+      var sub = t.closest && t.closest('[data-filtro-agenda]');
+      if (sub) { state.filtroAgenda = sub.getAttribute('data-filtro-agenda'); renderAgenda(); return; }
       if ((d = t.dataset.cliente)) selecionarCliente(d);
       else if ((d = t.dataset.procedimento)) adicionarItem(d);
       else if ((d = t.dataset.editarCliente)) editarCliente(d);

@@ -148,6 +148,11 @@
       </div>
       <div class="cartao">
         <h2>Agendamentos e atendimentos</h2>
+        <div class="sub-abas" id="agenda-filtro">
+          <button type="button" class="sub-aba ativa" data-filtro-agenda="agendados">Agendados <span class="cont" id="cont-agendados">0</span></button>
+          <button type="button" class="sub-aba" data-filtro-agenda="atendidos">Atendidos <span class="cont" id="cont-atendidos">0</span></button>
+          <button type="button" class="sub-aba" data-filtro-agenda="todos">Todos <span class="cont" id="cont-todos">0</span></button>
+        </div>
         <input type="text" id="agenda-busca" placeholder="Buscar por cliente ou procedimento..." style="margin-bottom:8px">
         <div id="lista-agenda"></div>
       </div>

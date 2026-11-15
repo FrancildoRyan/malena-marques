@@ -128,6 +128,19 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 }
 .aba.ativa { color: var(--dourado); border-bottom-color: var(--dourado); }
 
+/* sub-abas (ex.: Agendados / Atendidos / Todos, dentro da Agenda) */
+.sub-abas { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.sub-aba {
+  flex: 1 1 auto; border: 1px solid var(--borda); background: var(--cards); color: var(--suave);
+  border-radius: 999px; padding: 10px 14px; font-weight: 700; font-size: 14px;
+}
+.sub-aba .cont {
+  display: inline-block; min-width: 22px; margin-left: 6px; padding: 1px 7px;
+  background: var(--fundo); border-radius: 999px; font-size: 12px; color: var(--suave);
+}
+.sub-aba.ativa { background: var(--cor); border-color: var(--cor); color: var(--cor-texto); }
+.sub-aba.ativa .cont { background: rgba(255,255,255,.65); color: var(--cor-texto); }
+
 /* -------------------------------- avisos -------------------------------- */
 .aviso { padding: 10px 16px; font-size: 14px; font-weight: 600; text-align: center; }
 .aviso.offline { background: #FFF4E5; color: #8A5A00; }
@@ -154,7 +167,7 @@ h2 { font-size: 18px; margin-bottom: 12px; padding-left: 10px; border-left: 4px 
 
 .etiqueta { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
 .et-agendado, .et-pendente { background: #EEF1F0; color: var(--suave); }
-.et-realizado, .et-pago { background: #E7F3EA; color: var(--verde); }
+.et-realizado, .et-pago, .et-atendido { background: #E7F3EA; color: var(--verde); }
 .et-cancelado { background: #FBEAEA; color: var(--vermelho); }
 
 .valor.receita { color: var(--verde); }
