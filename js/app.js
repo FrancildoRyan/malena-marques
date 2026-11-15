@@ -19,6 +19,7 @@
     agendamentos: [],
     lancamentos: [],
     procedimentos: [],
+    itensAgenda: [],
     ajustes: null,
     filtroMes: '',
     online: navigator.onLine,
@@ -327,6 +328,28 @@
   }
   function procedimentoDur(nome) { var p = procedimentoPor(nome); return p ? durFmt(p.duracao_min) : ''; }
 
+  // Itens (procedimentos) de um atendimento. Compatível com os antigos, que tinham só um.
+  function itensDe(a) {
+    if (a && Array.isArray(a.itens) && a.itens.length) {
+      return a.itens.map(function (i) {
+        return { nome: (i && i.nome) || '', valor_centavos: (i && i.valor_centavos) || 0 };
+      });
+    }
+    if (a && (a.procedimento || a.valor_bruto_centavos || a.valor_centavos)) {
+      var v = (a.valor_bruto_centavos != null) ? a.valor_bruto_centavos : (a.valor_centavos || 0);
+      return [{ nome: a.procedimento || '', valor_centavos: v }];
+    }
+    return [];
+  }
+  function nomesItens(a) {
+    return itensDe(a).map(function (i) { return i.nome; }).filter(Boolean).join(' + ');
+  }
+  function duracaoItens(a) {
+    var total = 0;
+    itensDe(a).forEach(function (i) { var p = procedimentoPor(i.nome); if (p && p.duracao_min) total += p.duracao_min; });
+    return total;
+  }
+
   function filtrarProcedimentos(f) {
     f = (f || '').trim().toLowerCase();
     var lista = state.procedimentos.slice().sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
@@ -348,12 +371,51 @@
     box.classList.remove('oculto');
   }
 
-  function selecionarProcedimento(nome) {
+  function somaItens() {
+    return state.itensAgenda.reduce(function (s, i) { return s + (i.valor_centavos || 0); }, 0);
+  }
+
+  function renderItensAgenda() {
+    var box = $('agenda-itens');
+    if (!state.itensAgenda.length) { box.innerHTML = ''; return; }
+    box.innerHTML = state.itensAgenda.map(function (i, idx) {
+      return '<div class="item-proc">' +
+        '<span class="ip-nome">' + esc(i.nome) + '</span>' +
+        '<input class="ip-valor" data-idx="' + idx + '" inputmode="decimal" value="' + moedaInput(i.valor_centavos) + '">' +
+        '<button type="button" class="ip-x" data-remover-proc="' + idx + '" title="Remover">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function sincronizarTotal() {
+    if (!state.itensAgenda.length) return;
+    $('agenda-valor').value = moedaInput(somaItens());
+    atualizarTaxaInfo();
+  }
+
+  function adicionarItem(nome) {
+    nome = (nome || '').trim();
+    if (!nome) return;
     var p = procedimentoPor(nome);
-    $('agenda-procedimento').value = nome;
-    $('agenda-procedimento-busca').value = nome;
+    state.itensAgenda.push({ nome: p ? p.nome : nome, valor_centavos: p ? (p.valor_centavos || 0) : 0 });
+    $('agenda-procedimento').value = '';
+    $('agenda-procedimento-busca').value = '';
     $('agenda-procedimento-lista').classList.add('oculto');
-    if (p && p.valor_centavos) $('agenda-valor').value = moedaInput(p.valor_centavos);
+    renderItensAgenda();
+    sincronizarTotal();
+  }
+
+  function removerItem(idx) {
+    state.itensAgenda.splice(idx, 1);
+    renderItensAgenda();
+    sincronizarTotal();
+    atualizarTaxaInfo();
+  }
+
+  function atualizarValorItem(idx, centavos) {
+    if (!state.itensAgenda[idx]) return;
+    state.itensAgenda[idx].valor_centavos = centavos;
+    $('agenda-valor').value = moedaInput(somaItens());
     atualizarTaxaInfo();
   }
 
@@ -363,28 +425,16 @@
     $('agenda-procedimento-lista').classList.add('oculto');
   }
 
-  // Mantém o nome exibido em dia (ex.: após renomear o procedimento).
-  function sincronizarProcedimentoCombo() {
-    var nome = $('agenda-procedimento').value;
-    if (!nome) return;
-    var p = procedimentoPor(nome);
-    if (p) $('agenda-procedimento-busca').value = p.nome || '';
-  }
-
   function ligarComboboxProcedimento() {
     var busca = $('agenda-procedimento-busca');
     busca.onfocus = mostrarListaProcedimentos;
-    busca.oninput = function () {
-      var nome = this.value.trim().toLowerCase();
-      var exato = state.procedimentos.find(function (p) { return (p.nome || '').toLowerCase() === nome; });
-      $('agenda-procedimento').value = exato ? exato.nome : '';
-      mostrarListaProcedimentos();
-    };
+    busca.oninput = function () { mostrarListaProcedimentos(); };
     busca.onkeydown = function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
         var lista = filtrarProcedimentos(this.value);
-        if (lista.length) selecionarProcedimento(lista[0].nome);
+        if (lista.length) adicionarItem(lista[0].nome);
+        else if (this.value.trim()) adicionarItem(this.value.trim());
       } else if (e.key === 'Escape') {
         $('agenda-procedimento-lista').classList.add('oculto');
       }
@@ -393,6 +443,19 @@
       var box = $('agenda-procedimento-lista');
       setTimeout(function () { box.classList.add('oculto'); }, 180);
     };
+    $('agenda-proc-add').onclick = function () { adicionarItem($('agenda-procedimento-busca').value); };
+    var itensBox = $('agenda-itens');
+    itensBox.oninput = function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('ip-valor')) {
+        atualizarValorItem(parseInt(t.dataset.idx, 10), parseMoeda(t.value));
+      }
+    };
+    itensBox.onclick = function (e) {
+      var b = e.target.closest ? e.target.closest('[data-remover-proc]') : null;
+      if (b) { e.preventDefault(); removerItem(parseInt(b.dataset.removerProc, 10)); }
+    };
+    itensBox.onkeydown = function (e) { if (e.key === 'Enter') e.preventDefault(); };
   }
 
   function renderListaProcedimentos() {
@@ -464,7 +527,8 @@
     var busca = ($('agenda-busca').value || '').toLowerCase();
     var lista = state.agendamentos.filter(function (a) {
       return (a.cliente_nome || '').toLowerCase().indexOf(busca) >= 0 ||
-        (a.procedimento || '').toLowerCase().indexOf(busca) >= 0;
+        (a.procedimento || '').toLowerCase().indexOf(busca) >= 0 ||
+        nomesItens(a).toLowerCase().indexOf(busca) >= 0;
     }).sort(function (a, b) { return (a.data + (a.horario || '')).localeCompare(b.data + (b.horario || '')); });
 
     var el = $('lista-agenda');
@@ -473,7 +537,7 @@
       var cls = 'et-' + String(a.status || 'agendado').toLowerCase();
       return '<div class="item"><div class="info">' +
         '<div class="nome">' + esc(a.cliente_nome || '(sem cliente)') + '</div>' +
-        '<div class="meta">' + esc(a.procedimento || '') + (procedimentoDur(a.procedimento) ? ' (' + procedimentoDur(a.procedimento) + ')' : '') + '  •  ' + brData(a.data) + ' às ' + esc((a.horario || '').substring(0, 5)) + '</div>' +
+        '<div class="meta">' + esc(nomesItens(a)) + (duracaoItens(a) ? ' (' + durFmt(duracaoItens(a)) + ')' : '') + '  •  ' + brData(a.data) + ' às ' + esc((a.horario || '').substring(0, 5)) + '</div>' +
         infoPagamento(a) +
         (a.obs ? '<div class="obs">' + esc(a.obs) + '</div>' : '') +
         '</div><span class="etiqueta ' + cls + '">' + esc(a.status || 'Agendado') + '</span>' +
@@ -526,7 +590,13 @@
         bruto += val; taxas += tax; comissoes += com; liquido += liq;
         soma(porForma, a.forma_pagamento || 'Não informado', val);
         soma(porCliente, a.cliente_nome || '(sem cliente)', val);
-        soma(porProc, a.procedimento || '(sem procedimento)', val);
+        var its = itensDe(a);
+        var totIt = its.reduce(function (s, i) { return s + (i.valor_centavos || 0); }, 0);
+        if (!its.length) soma(porProc, '(sem procedimento)', val);
+        else its.forEach(function (i) {
+          var vi = totIt > 0 ? Math.round((i.valor_centavos || 0) * val / totIt) : 0;
+          soma(porProc, i.nome || '(sem procedimento)', vi);
+        });
       } else {
         aReceber += (a.valor_liquido != null && a.valor_liquido > 0) ? a.valor_liquido : val;
       }
@@ -579,7 +649,7 @@
           var cls = 'et-' + String(o.status || 'agendado').toLowerCase();
           return '<div class="item"><div class="info">' +
             '<div class="nome">' + esc(o.cliente_nome || '(sem cliente)') + '</div>' +
-            '<div class="meta">' + brData(o.data) + '  •  ' + esc(o.procedimento || '') + '</div>' +
+            '<div class="meta">' + brData(o.data) + '  •  ' + esc(nomesItens(o)) + '</div>' +
             infoPagamento(o) +
             '</div><span class="etiqueta ' + cls + '">' + esc(o.status || 'Agendado') + '</span>' +
             '<div class="acoes">' + (o.pago ? '' : '<button class="btn-mini verde" data-pagar-agenda="' + o.id + '">Receber</button>') + '</div></div>';
@@ -673,7 +743,6 @@
 
   function renderTudo() {
     sincronizarClienteCombo();
-    sincronizarProcedimentoCombo();
     renderListaProcedimentos();
     renderClientes();
     renderAgenda();
@@ -839,10 +908,12 @@
   }
   function atualizarTaxaInfo() {
     var partes = [];
-    var p = procedimentoPor($('agenda-procedimento').value);
-    if (p) {
-      var det = [p.duracao_min ? durFmt(p.duracao_min) : '', p.valor_centavos ? brl(p.valor_centavos) : ''].filter(Boolean);
-      partes.push('<b>' + esc(p.nome) + '</b>' + (det.length ? ' &bull; ' + det.join(' &bull; ') : ''));
+    if (state.itensAgenda.length) {
+      var nomes = state.itensAgenda.map(function (i) { return esc(i.nome); }).join(' + ');
+      var dur = 0;
+      state.itensAgenda.forEach(function (i) { var p = procedimentoPor(i.nome); if (p && p.duracao_min) dur += p.duracao_min; });
+      partes.push('<b>' + nomes + '</b>' + (dur ? ' &bull; ' + durFmt(dur) : '') +
+        ' &bull; ' + state.itensAgenda.length + ' procedimento' + (state.itensAgenda.length > 1 ? 's' : ''));
     }
     var v = valorComDesconto();
     if (v.pct > 0) partes.push('Desconto ' + numFmt(v.pct) + '% = ' + brl(v.desconto) + ' &bull; total <b>' + brl(v.final) + '</b>');
@@ -867,6 +938,8 @@
     $('form-agenda').reset();
     limparClienteBusca();
     limparProcedimentoBusca();
+    state.itensAgenda = [];
+    renderItensAgenda();
     $('agenda-situacao').value = 'Agendado';
     $('agenda-forma').value = 'Pix';
     $('agenda-recebimento').value = 'Direto';
@@ -885,8 +958,13 @@
     var cliente = clienteId ? clientePorId(clienteId) : null;
     var nomeDigitado = $('agenda-cliente-busca').value.trim();
     if (!cliente && !nomeDigitado) return toast('Escolha ou digite a cliente.');
-    var proc = ($('agenda-procedimento').value || $('agenda-procedimento-busca').value).trim();
-    if (!proc) return toast('Escolha ou digite o procedimento.');
+    var itens = state.itensAgenda.slice();
+    if (!itens.length) {
+      var texto = $('agenda-procedimento-busca').value.trim();
+      if (!texto) return toast('Adicione pelo menos um procedimento.');
+      itens = [{ nome: texto, valor_centavos: parseMoeda($('agenda-valor').value) }];
+    }
+    var proc = itens.map(function (i) { return i.nome; }).join(' + ');
     var rep = calcularRepasse();
     var v = rep.v;
     var forma = $('agenda-forma').value;
@@ -895,6 +973,7 @@
       cliente_id: cliente ? cliente.id : null,
       cliente_nome: cliente ? cliente.nome : nomeDigitado,
       procedimento: proc,
+      itens: itens,
       data: $('agenda-data').value || null,
       horario: $('agenda-horario').value || '',
       valor_centavos: v.final,
@@ -915,6 +994,16 @@
     };
     var r = id ? await sb.from('agendamentos').update(dados).eq('id', id)
                : await sb.from('agendamentos').insert(dados);
+    if (r.error && (r.error.code === '42703' || /itens/i.test(r.error.message || ''))) {
+      // Banco ainda sem a coluna "itens" (rode o SQL para ativar os vários
+      // procedimentos). Para não travar o salvamento, grava sem essa coluna —
+      // os nomes continuam guardados juntos no campo "procedimento".
+      var alt = {};
+      for (var k in dados) { if (k !== 'itens') alt[k] = dados[k]; }
+      r = id ? await sb.from('agendamentos').update(alt).eq('id', id)
+             : await sb.from('agendamentos').insert(alt);
+      if (!r.error) toast('Salvo. Rode o SQL no Supabase para guardar os vários procedimentos.');
+    }
     if (r.error) return toast('Erro ao salvar: ' + r.error.message);
     limparFormAgenda();
     await carregarTudo();
@@ -1060,7 +1149,15 @@
       try {
         if ((d.clientes || []).length) { var r1 = await sb.from('clientes').upsert(d.clientes); if (r1.error) throw r1.error; }
         if ((d.procedimentos || []).length) { var rp = await sb.from('procedimentos').upsert(d.procedimentos); if (rp.error) throw rp.error; }
-        if ((d.agendamentos || []).length) { var r2 = await sb.from('agendamentos').upsert(d.agendamentos); if (r2.error) throw r2.error; }
+        if ((d.agendamentos || []).length) {
+          var r2 = await sb.from('agendamentos').upsert(d.agendamentos);
+          if (r2.error && (r2.error.code === '42703' || /itens/i.test(r2.error.message || ''))) {
+            // Banco ainda sem a coluna "itens": importa sem ela.
+            var semItens = d.agendamentos.map(function (a) { var c = {}; for (var k in a) { if (k !== 'itens') c[k] = a[k]; } return c; });
+            r2 = await sb.from('agendamentos').upsert(semItens);
+          }
+          if (r2.error) throw r2.error;
+        }
         if ((d.lancamentos || []).length) { var r3 = await sb.from('lancamentos').upsert(d.lancamentos); if (r3.error) throw r3.error; }
         if (d.ajustes) { var r4 = await sb.from('ajustes').upsert(d.ajustes); if (r4.error) throw r4.error; }
         await carregarTudo(); renderTudo(); renderAjustes();
@@ -1127,7 +1224,7 @@
       if (!(t instanceof HTMLElement)) return;
       var d;
       if ((d = t.dataset.cliente)) selecionarCliente(d);
-      else if ((d = t.dataset.procedimento)) selecionarProcedimento(d);
+      else if ((d = t.dataset.procedimento)) adicionarItem(d);
       else if ((d = t.dataset.editarCliente)) editarCliente(d);
       else if ((d = t.dataset.excluirCliente)) excluirCliente(d);
       else if ((d = t.dataset.editarProcedimento)) editarProcedimento(d);
@@ -1197,8 +1294,10 @@
     var cli = a.cliente_id ? clientePorId(a.cliente_id) : null;
     $('agenda-cliente').value = cli ? cli.id : '';
     $('agenda-cliente-busca').value = cli ? (cli.nome || '') : (a.cliente_nome || '');
-    $('agenda-procedimento').value = a.procedimento || '';
-    $('agenda-procedimento-busca').value = a.procedimento || '';
+    state.itensAgenda = itensDe(a).map(function (i) { return { nome: i.nome || '', valor_centavos: i.valor_centavos || 0 }; });
+    $('agenda-procedimento').value = '';
+    $('agenda-procedimento-busca').value = '';
+    renderItensAgenda();
     $('agenda-data').value = (a.data || '').substring(0, 10);
     $('agenda-horario').value = (a.horario || '').substring(0, 5);
     $('agenda-valor').value = moedaInput(a.valor_bruto_centavos || a.valor_centavos);
@@ -1320,7 +1419,7 @@
       ],
       agendamentos: [
         { id: 'a1', cliente_id: 'c1', cliente_nome: 'Maria Souza', procedimento: 'Alongamento em gel', data: '2026-11-12', horario: '14:00', valor_centavos: 16200, valor_bruto_centavos: 18000, desconto_pct: 10, desconto_centavos: 1800, forma_pagamento: 'Cartão de crédito', parcelas: 3, recebimento: 'Direto', taxa_pct: 6.99, taxa_centavos: 1132, comissao_pct: 0, comissao_centavos: 0, valor_liquido: 15068, pago: true, status: 'Atendido', obs: '' },
-        { id: 'a2', cliente_id: 'c2', cliente_nome: 'Juliana Prado', procedimento: 'Manutenção de alongamento', data: '2026-11-13', horario: '10:00', valor_centavos: 9000, forma_pagamento: 'Pix', parcelas: 1, recebimento: 'Direto', taxa_pct: 0, taxa_centavos: 0, comissao_pct: 0, comissao_centavos: 0, valor_liquido: 9000, pago: true, status: 'Atendido', obs: '' },
+        { id: 'a2', cliente_id: 'c2', cliente_nome: 'Juliana Prado', procedimento: 'Manicure simples + Pedicure', itens: [{ nome: 'Manicure simples', valor_centavos: 4000 }, { nome: 'Pedicure', valor_centavos: 5000 }], data: '2026-11-13', horario: '10:00', valor_centavos: 9000, valor_bruto_centavos: 9000, forma_pagamento: 'Pix', parcelas: 1, recebimento: 'Direto', taxa_pct: 0, taxa_centavos: 0, comissao_pct: 0, comissao_centavos: 0, valor_liquido: 9000, pago: true, status: 'Atendido', obs: '' },
         { id: 'a3', cliente_id: 'c3', cliente_nome: 'Carla Nunes', procedimento: 'Pé e mão (combo)', data: '2026-11-14', horario: '16:30', valor_centavos: 12000, forma_pagamento: 'Cartão de débito', parcelas: 1, recebimento: 'Direto', taxa_pct: 1.99, taxa_centavos: 239, comissao_pct: 0, comissao_centavos: 0, valor_liquido: 11761, pago: false, status: 'Agendado', obs: '' },
         { id: 'a4', cliente_id: 'c1', cliente_nome: 'Maria Souza', procedimento: 'Banho de gel', data: '2026-11-10', horario: '11:00', valor_centavos: 10000, forma_pagamento: 'Dinheiro', parcelas: 1, recebimento: 'Salão', taxa_pct: 0, taxa_centavos: 0, comissao_pct: 30, comissao_centavos: 3000, valor_liquido: 7000, pago: false, status: 'Agendado', obs: '' },
         { id: 'a5', cliente_id: 'c2', cliente_nome: 'Juliana Prado', procedimento: 'Esmaltação em gel', data: '2026-11-05', horario: '09:30', valor_centavos: 6000, forma_pagamento: 'Pix', parcelas: 1, recebimento: 'Salão', taxa_pct: 0, taxa_centavos: 0, comissao_pct: 30, comissao_centavos: 1800, valor_liquido: 4200, pago: true, status: 'Atendido', obs: '' },

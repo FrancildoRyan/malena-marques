@@ -88,11 +88,17 @@
               <input type="hidden" id="agenda-cliente">
               <div id="agenda-cliente-lista" class="combo-lista oculto"></div>
             </div>
-            <div class="combo">
-              <label for="agenda-procedimento-busca">Procedimento</label>
-              <input type="text" id="agenda-procedimento-busca" placeholder="Digite para buscar o procedimento..." autocomplete="off">
+            <div class="combo grade-larga">
+              <label for="agenda-procedimento-busca">Procedimentos</label>
+              <div class="proc-add">
+                <div class="combo-campo">
+                  <input type="text" id="agenda-procedimento-busca" placeholder="Digite para buscar e adicionar..." autocomplete="off">
+                  <div id="agenda-procedimento-lista" class="combo-lista oculto"></div>
+                </div>
+                <button type="button" class="btn" id="agenda-proc-add">+ Adicionar</button>
+              </div>
               <input type="hidden" id="agenda-procedimento">
-              <div id="agenda-procedimento-lista" class="combo-lista oculto"></div>
+              <div id="agenda-itens" class="itens-proc"></div>
             </div>
             <div>
               <label for="agenda-data">Data</label>
@@ -103,7 +109,7 @@
               <input type="time" id="agenda-horario" required>
             </div>
             <div>
-              <label for="agenda-valor">Valor (R$)</label>
+              <label for="agenda-valor">Valor total (R$)</label>
               <input type="text" id="agenda-valor" inputmode="decimal" placeholder="0,00">
             </div>
             <div>

@@ -1,6 +1,6 @@
 /* Service Worker — guarda o "casco" do app para abrir mesmo sem internet.
    Os dados SEMPRE vêm do Supabase (nunca são cacheados aqui). */
-const CACHE = 'clinica-v1';
+const CACHE = 'clinica-v2';
 const SHELL = [
   './',
   './index.html',

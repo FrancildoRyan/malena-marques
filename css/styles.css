@@ -76,9 +76,27 @@ input:focus, select:focus, textarea:focus { border-color: var(--cor); }
 .combo-lista .opcao { padding: 11px 14px; cursor: pointer; font-size: 15px; border-bottom: 1px solid var(--borda); }
 .combo-lista .opcao:last-child { border-bottom: none; }
 .combo-lista .opcao:hover, .combo-lista .opcao.ativa { background: var(--cor); color: var(--cor-texto); }
-.combo-lista .opcao .sub { display: block; font-size: 12px; color: var(--suave); font-weight: 400; margin-top: 2px; }
+.combo-lista .opcao .sub { display: block; font-size: 12px; color: var(--suave); font-weight: 400; margin-top: 2px; pointer-events: none; }
 .combo-lista .opcao:hover .sub, .combo-lista .opcao.ativa .sub { color: var(--cor-texto); }
 .combo-lista .vazio { padding: 12px 14px; color: var(--suave); font-size: 14px; }
+
+/* ---------------------- vários procedimentos (agenda) -------------------- */
+.grade-larga { grid-column: 1 / -1; }
+.proc-add { display: flex; gap: 8px; align-items: stretch; }
+.proc-add .combo-campo { position: relative; flex: 1 1 auto; }
+.proc-add .btn { white-space: nowrap; padding: 12px 16px; }
+.itens-proc { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.itens-proc .item-proc {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 8px 10px;
+}
+.itens-proc .ip-nome { flex: 1 1 auto; font-size: 15px; }
+.itens-proc .ip-valor { width: 120px; text-align: right; padding: 8px 10px; }
+.itens-proc .ip-x {
+  background: #FBECEC; color: var(--vermelho); border: none; border-radius: 8px;
+  padding: 8px 12px; font-weight: 800; font-size: 16px; line-height: 1;
+}
+.itens-proc .ip-x:hover { background: #F7DADA; }
 
 /* -------------------------------- botões -------------------------------- */
 button { font-family: inherit; font-size: 15px; cursor: pointer; border: none; border-radius: 10px; padding: 12px 18px; font-weight: 700; }
