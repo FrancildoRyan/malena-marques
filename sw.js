@@ -35,9 +35,10 @@ self.addEventListener('fetch', (e) => {
   // Só cuida do próprio site; Supabase e outros passam direto pela rede.
   if (url.origin !== location.origin) return;
 
-  // Rede primeiro (sempre pega a versão mais nova); cache só como reserva offline.
+  // Rede primeiro, sempre revalidando (cache: 'no-cache'), para pegar na hora
+  // qualquer atualização que eu publicar; o cache fica só como reserva offline.
   e.respondWith(
-    fetch(req).then((res) => {
+    fetch(req, { cache: 'no-cache' }).then((res) => {
       const copia = res.clone();
       caches.open(CACHE).then((c) => c.put(req, copia)).catch(() => {});
       return res;
